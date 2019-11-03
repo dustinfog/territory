@@ -3,126 +3,16 @@ package logic
 import (
 	"errors"
 	"fmt"
-	"image"
-	"image/color"
 	"sort"
 	"time"
-
-	rbt "github.com/emirpasic/gods/trees/redblacktree"
 )
 
 const FlagHalfLength int32 = 7
-
-//   |              |
-// 0 |      N       | 1
-//---|--------------|---
-//   | 4          5 |
-//   |              |
-// W |     TILE     | E
-//   |              |
-//   | 7          6 |
-//---+--------------+---
-// 3 |      S       | 2
-//   |              |
-
-const (
-	E  = 0
-	SE = 1
-	S  = 2
-	SW = 3
-	W  = 4
-	NW = 5
-	N  = 6
-	NE = 7
-)
-
-const (
-	VertexOuterNW = 1
-	VertexOuterNE = 1 << 1
-	VertexOuterSE = 1 << 2
-	VertexOuterSW = 1 << 3
-	VertexInnerNW = 1 << 4
-	VertexInnerNE = 1 << 5
-	VertexInnerSE = 1 << 6
-	VertexInnerSW = 1 << 7
-)
-
-func init() {
-	orientations = make([]*Orientation, 8, 8)
-	orientations[E] = &Orientation{Vector2{1, 0}, E}
-	orientations[SE] = &Orientation{Vector2{1, 1}, SE}
-	orientations[S] = &Orientation{Vector2{0, 1}, S}
-	orientations[SW] = &Orientation{Vector2{-1, 1}, SW}
-	orientations[W] = &Orientation{Vector2{-1, 0}, W}
-	orientations[NW] = &Orientation{Vector2{-1, -1}, NW}
-	orientations[N] = &Orientation{Vector2{0, -1}, N}
-	orientations[NE] = &Orientation{Vector2{1, -1}, NE}
-
-	vertexTypes = make(map[int]*VertexType)
-	vertexTypes[VertexOuterNW] = &VertexType{
-		Pos:          Vector2{0, 0},
-		Orientation:  orientations[E],
-		IsOuter:      true,
-		Code:         VertexOuterNW,
-		ExpectedCode: VertexOuterNE | VertexInnerNW,
-	}
-	vertexTypes[VertexOuterNE] = &VertexType{
-		Pos:          Vector2{1, 0},
-		Orientation:  orientations[S],
-		IsOuter:      true,
-		Code:         VertexOuterNE,
-		ExpectedCode: VertexOuterSE | VertexInnerNE,
-	}
-	vertexTypes[VertexOuterSE] = &VertexType{
-		Pos:          Vector2{1, 1},
-		Orientation:  orientations[W],
-		IsOuter:      true,
-		Code:         VertexOuterSE,
-		ExpectedCode: VertexOuterSW | VertexInnerSE,
-	}
-	vertexTypes[VertexOuterSW] = &VertexType{
-		Pos:          Vector2{0, 1},
-		Orientation:  orientations[N],
-		IsOuter:      true,
-		Code:         VertexOuterSW,
-		ExpectedCode: VertexOuterNW | VertexInnerSW,
-	}
-	vertexTypes[VertexInnerNW] = &VertexType{
-		Pos:          Vector2{0, 0},
-		Orientation:  orientations[N],
-		IsOuter:      false,
-		Code:         VertexInnerNW,
-		ExpectedCode: VertexOuterNW | VertexInnerSW,
-	}
-	vertexTypes[VertexInnerNE] = &VertexType{
-		Pos:          Vector2{1, 0},
-		Orientation:  orientations[E],
-		IsOuter:      false,
-		Code:         VertexInnerNE,
-		ExpectedCode: VertexOuterNE | VertexInnerNW,
-	}
-	vertexTypes[VertexInnerSE] = &VertexType{
-		Pos:          Vector2{1, 1},
-		Orientation:  orientations[S],
-		IsOuter:      false,
-		Code:         VertexInnerSE,
-		ExpectedCode: VertexOuterSE | VertexInnerNE,
-	}
-	vertexTypes[VertexInnerSW] = &VertexType{
-		Pos:          Vector2{0, 1},
-		Orientation:  orientations[W],
-		IsOuter:      false,
-		Code:         VertexInnerSW,
-		ExpectedCode: VertexOuterSW | VertexInnerSE,
-	}
-}
 
 type Vector2 struct {
 	X int32
 	Y int32
 }
-
-var orientations []*Orientation
 
 type Orientation struct {
 	Vector2
@@ -146,10 +36,8 @@ func (o *Orientation) rotate(times int) *Orientation {
 	if times < 0 {
 		times = 8 - ((-times) % 8)
 	}
-	return orientations[(o.Code+times)%8]
+	return Orientations[(o.Code+times)%8]
 }
-
-var vertexTypes map[int]*VertexType
 
 type VertexType struct {
 	Pos          Vector2      //顶点在Tile内的位置
@@ -393,7 +281,7 @@ func (m *Map) removeTile(x int32, y int32) (*Tile, bool) {
 
 func (m *Map) CalcVertexCode(t *Tile) int {
 	surround := make([]bool, 8, 8)
-	for i, o := range orientations {
+	for i, o := range Orientations {
 		x := t.X + o.X
 		y := t.Y + o.Y
 
@@ -406,7 +294,7 @@ func (m *Map) CalcVertexCode(t *Tile) int {
 	}
 
 	code := 0
-	for subCode, vertexType := range vertexTypes {
+	for subCode, vertexType := range VertexTypes {
 		var orientation = vertexType.Orientation
 		if vertexType.IsOuter {
 			if !surround[orientation.Back().Code] && !surround[orientation.Left().Code] {
@@ -738,76 +626,6 @@ func (m *Map) scanAllianceArea(allianceId int32) {
 	}
 }
 
-func (m *Map) DrawImage(image *image.RGBA) {
-	for x, row := range m.tiles {
-		for y, tile := range row {
-			var a uint8
-			if tile.IsValid() {
-				a = 255
-			} else {
-				a = 100
-			}
-
-			r := 255 / uint8(tile.GetAllianceId())
-
-			for i := 0; i < 4; i++ {
-				for j := 0; j < 4; j++ {
-					//isV, _ := tile.IsVertex()
-					//if isV {
-					//	r = 0
-					//}
-
-					image.SetRGBA(int(x)*4+i, int(y)*4+j, color.RGBA{
-						r,
-						0,
-						0,
-						a,
-					})
-				}
-			}
-		}
-	}
-}
-
-func (m *Map) DrawBoundaries(image *image.RGBA, allianceId int32) {
-
-	fmt.Printf("drawing %d\n", allianceId)
-	cl := color.RGBA{
-		255 / uint8(allianceId),
-		0,
-		0,
-		255,
-	}
-	bs := NewBoundarySeeker(m, allianceId)
-	vertex, _ := bs.Next()
-
-	for !bs.Finished() {
-		next, _ := bs.Next()
-
-		startX := int(vertex.X)*4 + int(vertex.Type.Pos.X)*3
-		startY := int(vertex.Y)*4 + int(vertex.Type.Pos.Y)*3
-
-		endX := int(next.X)*4 + int(next.Type.Pos.X)*3
-		endY := int(next.Y)*4 + int(next.Type.Pos.Y)*3
-
-		if startX != endX {
-			for x := startX; x != endX; x += int(vertex.Type.Orientation.X) {
-				image.SetRGBA(x, startY, cl)
-			}
-		} else {
-			for y := startY; y != endY; y += int(vertex.Type.Orientation.Y) {
-				image.SetRGBA(startX, y, cl)
-			}
-		}
-
-		if bs.IsTail() {
-			vertex, _ = bs.Next()
-		} else {
-			vertex = next
-		}
-	}
-}
-
 type OverlapSorter struct {
 	Flags []*Flag
 }
@@ -830,301 +648,4 @@ func (f *OverlapSorter) Swap(i, j int) {
 	fi := f.Flags[i]
 	f.Flags[i] = f.Flags[j]
 	f.Flags[j] = fi
-}
-
-type BoundarySeeker struct {
-	xBaseYTree   map[int32]*rbt.Tree // {x => y => &code}
-	yBaseXTree   map[int32]*rbt.Tree // {y => x => &code}
-	mp           *Map
-	head         *Vertex
-	current      *Vertex
-	pCurrentCode *int
-}
-
-func NewBoundarySeeker(m *Map, allianceId int32) *BoundarySeeker {
-	xBaseYTree := make(map[int32]*rbt.Tree)
-	yBaseXTree := make(map[int32]*rbt.Tree)
-
-	flags := m.flags[allianceId]
-
-	for f := range flags {
-		flagVertexes := f.Vertexes
-
-		for x, flagRow := range flagVertexes {
-			yTree := xBaseYTree[x]
-			if yTree == nil {
-				yTree = rbt.NewWithIntComparator()
-				xBaseYTree[x] = yTree
-			}
-			for y, code := range flagRow {
-				code := code
-				refCode := &code
-				yTree.Put(int(y), refCode)
-
-				xTree := yBaseXTree[y]
-				if xTree == nil {
-					xTree = rbt.NewWithIntComparator()
-					yBaseXTree[y] = xTree
-				}
-
-				xTree.Put(int(x), refCode)
-			}
-		}
-	}
-
-	return &BoundarySeeker{
-		xBaseYTree: xBaseYTree,
-		yBaseXTree: yBaseXTree,
-		mp:         m,
-	}
-}
-
-func (bs *BoundarySeeker) Next() (next *Vertex, err error) {
-	if len(bs.xBaseYTree) == 0 {
-		if bs.head != nil {
-			next = bs.head
-			bs.head = nil
-			bs.current = nil
-			bs.pCurrentCode = nil
-		}
-
-		return
-	}
-
-	var pCode *int
-	defer func() {
-		*pCode ^= next.Type.Code
-
-		if *pCode == 0 {
-			bs.remove(next.X, next.Y)
-		}
-
-		bs.current = next
-		bs.pCurrentCode = pCode
-	}()
-
-	if bs.head == nil {
-		next, pCode, err = bs.pickHead()
-		return
-	}
-
-	vertex := bs.current
-	if vertex.Type.IsOuter {
-		next, pCode = bs.pickSelf()
-		if next != nil {
-			return
-		}
-	}
-
-	orientation := vertex.Type.Orientation
-
-	if orientation.X != 0 {
-		next, pCode = bs.pickAlongX(orientation)
-		if next != nil {
-			return
-		}
-	} else {
-		next, pCode = bs.pickAlongY(orientation)
-		if next != nil {
-			return
-		}
-	}
-
-	next = bs.head
-	bs.head = nil
-	return
-}
-
-func (bs *BoundarySeeker) IsValid() bool {
-	tile, _ := bs.mp.GetTile(bs.head.X, bs.head.Y, false)
-	if tile != nil {
-		return tile.IsValid()
-	}
-
-	return false
-}
-
-func (bs *BoundarySeeker) IsHead() bool {
-	return bs.head == nil && bs.current == bs.head
-}
-
-func (bs *BoundarySeeker) IsTail() bool {
-	return bs.head == nil && bs.current != nil
-}
-
-func (bs *BoundarySeeker) Finished() bool {
-	return len(bs.xBaseYTree) == 0 && bs.current == nil
-}
-
-func (bs *BoundarySeeker) pickHead() (*Vertex, *int, error) {
-	xBaseYTree := bs.xBaseYTree
-
-	var vertex *Vertex
-	var pCode *int
-
-	for x, yTree := range xBaseYTree {
-		it := yTree.Iterator()
-		it.First()
-		pCode = it.Value().(*int)
-
-		vertex = &Vertex{
-			X: x,
-			Y: int32(it.Key().(int)),
-		}
-		break
-	}
-
-	if pCode == nil || vertex == nil {
-		return nil, nil, errors.New("error")
-	}
-
-	for c, subVertex := range vertexTypes {
-		if (*pCode)&c == c {
-			vertex.Type = subVertex
-			break
-		}
-	}
-
-	bs.head = vertex
-	return vertex, pCode, nil
-}
-
-func (bs *BoundarySeeker) pickSelf() (*Vertex, *int) {
-	pCode := bs.pCurrentCode
-	innerCode := bs.current.Type.ExpectedCode & *pCode
-	if innerCode != 0 {
-		nextVertexType := vertexTypes[innerCode]
-		if nextVertexType.IsOuter {
-			return &Vertex{
-				X:    bs.current.X,
-				Y:    bs.current.Y,
-				Type: nextVertexType,
-			}, pCode
-		}
-	}
-
-	return nil, nil
-}
-
-func (bs *BoundarySeeker) pickAlongX(orientation *Orientation) (*Vertex, *int) {
-	currentY := bs.current.Y
-	xTree := bs.yBaseXTree[currentY]
-
-	if xTree == nil {
-		return nil, nil
-	}
-
-	var nextCode int
-	var pCode *int
-	var nextNode *rbt.Node
-
-	expectedCode := bs.current.Type.ExpectedCode
-	likelyClosed := currentY == bs.head.Y && expectedCode&bs.head.Type.Code != 0
-	currentX := bs.current.X
-
-	for nextCode == 0 {
-		var found bool
-		var nextX int32
-		if orientation.X > 0 {
-			nextNode, found = xTree.Ceiling(int(currentX) + 1)
-			if !found {
-				return nil, nil
-			}
-			nextX = int32(nextNode.Key.(int))
-			if likelyClosed && currentX < bs.head.X && nextX > bs.head.X {
-				return nil, nil
-			}
-		} else {
-			nextNode, found = xTree.Floor(int(currentX) - 1)
-			if !found {
-				return nil, nil
-			}
-			nextX = int32(nextNode.Key.(int))
-			if likelyClosed && currentX > bs.head.X && nextX < bs.head.X {
-				return nil, nil
-			}
-		}
-
-		pCode = nextNode.Value.(*int)
-		nextCode = expectedCode & *pCode
-		currentX = nextX
-	}
-
-	if nextNode != nil {
-		return &Vertex{
-			X:    currentX,
-			Y:    currentY,
-			Type: vertexTypes[nextCode],
-		}, pCode
-	}
-
-	return nil, nil
-}
-
-func (bs *BoundarySeeker) pickAlongY(orientation *Orientation) (*Vertex, *int) {
-	currentX := bs.current.X
-	yTree := bs.xBaseYTree[currentX]
-
-	if yTree == nil {
-		return nil, nil
-	}
-
-	var nextCode int
-	var pCode *int
-	var nextNode *rbt.Node
-
-	expectedCode := bs.current.Type.ExpectedCode
-	likelyClosed := currentX == bs.head.X && expectedCode&bs.head.Type.Code != 0
-	currentY := bs.current.Y
-
-	for nextCode == 0 {
-		var found bool
-		var nextY int32
-		if orientation.Y > 0 {
-			nextNode, found = yTree.Ceiling(int(currentY) + 1)
-			if !found {
-				return nil, nil
-			}
-			nextY = int32(nextNode.Key.(int))
-			if likelyClosed && currentY < bs.head.Y && nextY > bs.head.Y {
-				return nil, nil
-			}
-		} else {
-			nextNode, found = yTree.Floor(int(currentY) - 1)
-			if !found {
-				return nil, nil
-			}
-			nextY = int32(nextNode.Key.(int))
-			if likelyClosed && currentY > bs.head.Y && nextY < bs.head.Y {
-				return nil, nil
-			}
-		}
-
-		pCode = nextNode.Value.(*int)
-		nextCode = expectedCode & *pCode
-		currentY = nextY
-	}
-
-	if nextNode != nil {
-		return &Vertex{
-			X:    currentX,
-			Y:    currentY,
-			Type: vertexTypes[nextCode],
-		}, pCode
-	}
-
-	return nil, nil
-}
-
-func (bs *BoundarySeeker) remove(x int32, y int32) {
-	xBaseYTree := bs.xBaseYTree
-	yBaseXTree := bs.yBaseXTree
-	xBaseYTree[x].Remove(int(y))
-	if xBaseYTree[x].Empty() {
-		delete(xBaseYTree, x)
-	}
-	yBaseXTree[y].Remove(int(x))
-	if yBaseXTree[y].Empty() {
-		delete(yBaseXTree, y)
-	}
 }

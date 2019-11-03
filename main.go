@@ -47,9 +47,9 @@ func main() {
 	//m.RemoveFlag(flags[2])
 
 	newRgba := image.NewRGBA(image.Rect(0, 0, 250, 250))
-	//m.DrawImage(newRgba)
-	m.DrawBoundaries(newRgba, 1)
-	m.DrawBoundaries(newRgba, 2)
+	//DrawImage(m, newRgba)
+	logic.DrawBoundaries(m, newRgba, 1)
+	logic.DrawBoundaries(m, newRgba, 2)
 
 	f, err := os.OpenFile("/Users/panzd/test_.png", os.O_SYNC|os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {

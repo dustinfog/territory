@@ -2,6 +2,7 @@ package logic
 
 import (
 	"errors"
+	"fmt"
 
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 )
@@ -31,6 +32,7 @@ func NewBoundarySeeker(m *Map, allianceId int32) *BoundarySeeker {
 				xBaseYTree[x] = yTree
 			}
 			for y, code := range flagRow {
+				fmt.Printf("Index: %d,%d,%d\n", x, y, code)
 				code := code
 				refCode := &code
 				yTree.Put(int(y), refCode)
@@ -67,10 +69,12 @@ func (bs *BoundarySeeker) Next() (next *Vertex, err error) {
 
 	var pCode *int
 	defer func() {
-		*pCode ^= next.Type.Code
+		if pCode != nil {
+			*pCode ^= next.Type.Code
 
-		if *pCode == 0 {
-			bs.remove(next.X, next.Y)
+			if *pCode == 0 {
+				bs.remove(next.X, next.Y)
+			}
 		}
 
 		bs.current = next

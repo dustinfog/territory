@@ -73,6 +73,10 @@ func (t *Tile) IsValid() bool {
 	return t.ownerFlag != nil && t.ownerFlag.IsValid
 }
 
+func (t *Tile) IsFlag() bool {
+	return t.ownerFlag.Tile == t
+}
+
 func (t *Tile) IsVertex() (bool, int) {
 	return t.ownerFlag.IsVertex(t.X, t.Y)
 }
@@ -556,7 +560,7 @@ func (m *Map) scanFlagArea(flag *Flag) {
 
 		if tile.Y < maxY {
 			scan(tile.X, tile.Y+1)
-		} else if tile.Y == minY {
+		} else if tile.Y == maxY {
 			checkNeighbor(tile.X, tile.Y+1)
 		}
 

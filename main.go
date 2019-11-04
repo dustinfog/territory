@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"os"
 	"territory/logic"
@@ -13,11 +14,40 @@ func main() {
 	m := logic.NewMap()
 
 	points := [][]int32{
+		//{
+		//	1, 25, 25, 1,
+		//},
+		//{
+		//	1, 40, 25, 0,
+		//},
+		//{
+		//	1, 55, 25, 1,
+		//},
+		//
+		//{
+		//	1, 55, 40, 1,
+		//},
+		//
+		//{
+		//	1, 55, 55, 1,
+		//},
+		//
+		//{
+		//	1, 40, 55, 1,
+		//},
+		//
+		//{
+		//	1, 25, 55, 1,
+		//},
+		//{
+		//	1, 25, 40, 1,
+		//},
+
 		{
 			1, 25, 25, 1,
 		},
 		{
-			1, 35, 26, 1,
+			2, 35, 26, 1,
 		},
 		{
 			1, 29, 35, 0,
@@ -27,6 +57,42 @@ func main() {
 		},
 		{
 			1, 35, 45, 0,
+		},
+		{
+			1, 50, 45, 0,
+		},
+		{
+			1, 65, 50, 0,
+		},
+		{
+			1, 65, 65, 0,
+		},
+		{
+			1, 53, 70, 0,
+		},
+		{
+			1, 40, 68, 0,
+		},
+		{
+			1, 25, 63, 0,
+		},
+		{
+			1, 15, 73, 0,
+		},
+		{
+			1, 14, 88, 0,
+		},
+		{
+			1, 16, 100, 0,
+		},
+		{
+			1, 30, 95, 0,
+		},
+		{
+			1, 43, 90, 0,
+		},
+		{
+			1, 55, 80, 0,
 		},
 	}
 
@@ -46,12 +112,25 @@ func main() {
 	//m.RemoveFlag(flags[1])
 	//m.RemoveFlag(flags[2])
 
-	newRgba := image.NewRGBA(image.Rect(0, 0, 250, 250))
-	//DrawImage(m, newRgba)
-	logic.DrawBoundaries(m, newRgba, 1)
-	logic.DrawBoundaries(m, newRgba, 2)
+	newRgba := image.NewRGBA(image.Rect(0, 0, 500, 500))
+	colors := make(map[int32]color.RGBA)
+	colors[1] = color.RGBA{
+		R: 255,
+		G: 0,
+		B: 0,
+		A: 255,
+	}
+	colors[2] = color.RGBA{
+		R: 0,
+		G: 0,
+		B: 255,
+		A: 255,
+	}
 
-	f, err := os.OpenFile("/Users/panzd/test_.png", os.O_SYNC|os.O_RDWR|os.O_CREATE, 0666)
+	logic.DrawImage(m, newRgba, colors)
+	logic.DrawBoundaries(m, newRgba, colors)
+
+	f, err := os.OpenFile("/Users/panzd/Documents/territory/test8.png", os.O_SYNC|os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}

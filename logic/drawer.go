@@ -9,21 +9,17 @@ import (
 func DrawImage(m *Map, image *image.RGBA, colors map[int32]color.RGBA) {
 	for x, row := range m.tiles {
 		for y, tile := range row {
-
+			isV := tile.IsFlag()
+			cl := colors[tile.GetAllianceId()]
+			if isV {
+				cl = color.RGBA{
+					0, 0, 0, 255,
+				}
+			} else {
+				cl.A = 8
+			}
 			for i := 0; i < 4; i++ {
 				for j := 0; j < 4; j++ {
-					//isV, _ := tile.IsVertex()
-
-					isV := tile.IsFlag()
-					cl := colors[tile.GetAllianceId()]
-					if isV {
-						cl = color.RGBA{
-							0, 0, 0, 255,
-						}
-					} else {
-						cl.A = 8
-					}
-
 					image.SetRGBA(int(x)*4+i, int(y)*4+j, cl)
 				}
 			}
